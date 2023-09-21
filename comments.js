@@ -1,35 +1,77 @@
-// create web server
-// use express framework
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-var fs = require('fs');
-var cors = require('cors');
-var multer = require('multer');
-var upload = multer({dest: './uploads/'});
+// Create web server
+// Run: node comments.js
+// Test: curl http://localhost:8080/comments
+// Test: curl -d "body=This is a comment" http://localhost:8080/comments
+// Test: curl -X PUT -d "body=This is an updated comment" http://localhost:8080/comments/1
+// Test: curl -X DELETE http://localhost:8080/comments/1
 
-// use cors to allow cross origin resource sharing
-app.use(cors());
+var http = require('http');
+var url = require('url');
+var qs = require('querystring');
 
-// use body parser
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
+var comments = [
+    { "body": "This is a comment" },
+    { "body": "This is another comment" },
+    { "body": "This is the last comment" }
+];
 
-// use multer to parse multipart form data
-// app.use(upload.array());
-// app.use(express.static('public'));
+function getComments() {
+    var body = JSON.stringify(comments);
+    return body;
+}
 
-// read comments from file
-var comments = JSON.parse(fs.readFileSync('comments.json', 'utf8'));
+function addComment(comment) {
+    comments.push(comment);
+}
 
-// get comments
-app.get('/comments', function (req, res) {
-    console.log("GET From Server");
-    res.json(comments);
-});
+function updateComment(comment, index) {
+    comments[index] = comment;
+}
 
-// post comment
-app.post('/comments', function (req, res) {
-    console.log("POST From Server");
-    var newComment = {
-        id: Date.now(),
+function deleteComment(index) {
+    comments.splice(index, 1);
+}
+
+http.createServer(function(req, res) {
+    if (req.method === "GET") {
+        if (req.url === "/comments") {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(getComments());
+        }
+    } else if (req.method === "POST") {
+        if (req.url === "/comments") {
+            var body = "";
+
+            req.on("data", function(chunk) {
+                body += chunk;
+            });
+
+            req.on("end", function() {
+                var comment = qs.parse(body);
+                addComment(comment);
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify(comment));
+            });
+        }
+    } else if (req.method === "PUT") {
+        var path = url.parse(req.url).pathname;
+        var match = path.match(/^\/comments\/(\d+)$/);
+
+        if (match) {
+            var index = match[1];
+
+            var body = "";
+
+            req.on("data", function(chunk) {
+                body += chunk;
+            });
+
+            req.on("end", function() {
+                var comment = qs.parse(body);
+                updateComment(comment, index);
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify(comment));
+            });
+        }
+    } else if (req.method === "DELETE") {
+        var path = url
