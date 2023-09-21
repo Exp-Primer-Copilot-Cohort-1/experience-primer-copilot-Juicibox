@@ -1,18 +1,35 @@
 // create web server
+// use express framework
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+var fs = require('fs');
+var cors = require('cors');
+var multer = require('multer');
+var upload = multer({dest: './uploads/'});
 
-// create web server for comments
-//=============
+// use cors to allow cross origin resource sharing
+app.use(cors());
 
-// import module
-const express = require('express');
-const router = express.Router();
-const commentsController = require('../controllers/commentsController');
+// use body parser
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
 
-// Handle request
-router.get('/', commentsController.getComments);
-router.get('create', commentsController.createComment);
-router.post('create', commentsController.postComment);
-router.get('delete', commentsController.deleteComment);
+// use multer to parse multipart form data
+// app.use(upload.array());
+// app.use(express.static('public'));
 
-// export router
-module.exports = router;
+// read comments from file
+var comments = JSON.parse(fs.readFileSync('comments.json', 'utf8'));
+
+// get comments
+app.get('/comments', function (req, res) {
+    console.log("GET From Server");
+    res.json(comments);
+});
+
+// post comment
+app.post('/comments', function (req, res) {
+    console.log("POST From Server");
+    var newComment = {
+        id: Date.now(),
